@@ -2,12 +2,14 @@
 
   // number declarations:
 
+
   int fsrPins[] = {A0, A1, A2, A3}; // Define the pin and the respective output
   int maxForce[4]; // Define the maximum force for each sensor
   int maxForceValue = 0; // Define the maximum force for a particular reading
   const int numSensors = 4; // Define the amount of sensors there are
   unsigned long startTime = millis(); // Define the start time of a timer
-
+  bool leftButtonPressed;
+  bool rightButtonPressed;
 
   // function declarations here:
   void findMaxForce(); 
@@ -16,9 +18,13 @@
 
   void setup() {
     Serial.begin(9600);
-    findMaxForce();
-    for (int i = 0; i < numSensors; i++) {
-      Serial.println(maxForce[i]);
+    leftButtonPressed = CircuitPlayground.leftButton();
+    rightButtonPressed = CircuitPlayground.rightButton();
+    if leftButtonPressed {
+      findMaxForce();
+      for (int i = 0; i < numSensors; i++) {
+        Serial.println(maxForce[i]);
+      }
     }
   }
 
