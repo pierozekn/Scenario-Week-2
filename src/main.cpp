@@ -25,15 +25,15 @@ void findForceThresholdValue();
 void programRuntime();
 void welcomeScreen();
 
+// calibrating screen
+void calibratingScreen();
+void excerciseScreen();
+void CompletionScreen();
+
+
 
 void setup() {
 Serial.begin(9600);
-  if (leftButtonPressed) {
-    findMaxForce();
-    for (int i = 0; i < numSensors; i++) {
-    Serial.println(maxForce[i]);
-    }
-  }
 }
 
 void loop() {
@@ -42,6 +42,26 @@ void loop() {
 }
 
 // function definitions here:
+
+void calibratingScreen(){
+  u8g2.drawStr(5, 20, "Calibrating...");
+  u8g2.drawStr(5, 40, "Squeeze each finger");
+}
+
+void exerciseScreen(){
+  u8g2.drawStr(5, 20, "Put Down fingers:");
+  int x = 5;
+  for (int i = 0; i < requiredCount; i++) {
+    u8g2.setCursor(x, 40);
+    u8g2.print(requiredNumbers[i]);
+    x += 15;
+  }
+}
+
+void completionScreen(){
+  u8g2.drawStr(5, 20, "Great job!");
+  u8g2.drawStr(5, 40, "Exercise complete");
+}
 
 void clearMaxForce() { // Resets the maximum force for each sensor
   for (int i = 0; i < numSensors; i++) { // For each sensor
@@ -52,14 +72,16 @@ void clearMaxForce() { // Resets the maximum force for each sensor
 void findMaxForce(){ // Find the maximum force through the sensor 
   clearMaxForce(); // Clear the maximum force if there was one to begin with
   for (int i = 0; i < numSensors; i++) { // For each sensor
-    while (millis() -  startTime < 5000){ // Start a 5 second time
+    while (millis() -  startTime - 5000*i < 5000){ // Start a 5 second time
       int reading = analogRead(fsrPins[i]); // Read the force from the sensor
       if (reading > maxForce[i]) { // If the reading is bigger than the maximum force
-      maxForce[i] = reading; // New reading replaces the old maximum force
+        maxForce[i] = reading; // New reading replaces the old maximum force
+        Serial.print(maxForce[i]);
       }
     }
   }
 }
+
 
 void findForceThresholdValue(){ // Finding the threshold value
   for (int i = 0; i < numSensors; i++) {
@@ -105,6 +127,7 @@ void programRuntime(){ // what the program runs
         break;
       case 1:
       // set the screen to say "time to calibrate"
+      initialiseScreen(calibratingScreen); //to calibrate the force
         
       // Calibrates the finger force, iterates through each of the fingers and calculates the maximum force
         findMaxForce();
@@ -117,13 +140,13 @@ void programRuntime(){ // what the program runs
 
       case 2:
       // do the exercise
-
+        initialiseScreen(excerciseScreen);
         currentStep = 3;
         break;
 
       case 3:
       // complete the exercise
-
+        initialiseScreen(completionScreen);
         currentStep = 4;
         break;
 
