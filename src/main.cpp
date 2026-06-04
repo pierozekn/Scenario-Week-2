@@ -6,7 +6,7 @@ U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, SCL, SDA, U8X8_PIN_NONE); // C
 
 // declarations:
 
-int fsrPins[] = {A0, A1, A2, A3}; // Define the pin and the respective output
+int fsrPins[] = {A0, A1, A3, A6}; // Define the pin and the respective output
 int maxForce[4]; // Define the maximum force for each sensor
 int thresholdValue[4]; // Define the maximum force for each sensor
 int maxForceValue = 0; // Define the maximum force for a particular reading
@@ -61,7 +61,7 @@ void setup() {
   CircuitPlayground.begin();
   Wire.begin(); 
   u8g2.begin(); 
-  randomSeed(analogRead(A6)); // 
+  randomSeed(analogRead(A7)); // 
 }
 
 void loop() {
@@ -121,7 +121,6 @@ void findMaxForce() { // Find the maximum force through the sensor
         }
       delay(100);
       }
-    Serial.println(maxForce[i]);
     } 
     initialiseScreen(completedExerciseScreen);
   completionSuccess = true;
@@ -361,7 +360,6 @@ void programRuntime() { // what the program runs
   delay(10); 
 }
 
-
 void removingSystematicErrors(){  
   howManyFingers = 4;
   for (int i = 0; i < howManyFingers; i++) {
@@ -393,3 +391,5 @@ void findAverageOnEachFinger(const char* message){
   }
 
 }
+
+// TODO: Make sure the correct fingers are pushed down
