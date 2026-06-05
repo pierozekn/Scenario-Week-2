@@ -18,7 +18,7 @@ bool rightButtonPressed = false; // Determine if the right button is pressed
 bool lastRightButtonPressed = false; // Remembers previous state
 int currentStep = 0; // Used in programRuntime to ensure case is reset when the program is ran again
 int amountOfFingers[4]; //What fingers are chosen
-int howManyFingers = 0; // Same for requiredNumber
+int howManyFingers = 0; // How many fingers are chosen
 int position = 5; // Initial position for when counting up to 5
 int currentFinger = 0; // What finger is it on
 int difficulty = 0; // Showcase the amount of times it loops
@@ -263,27 +263,21 @@ void selectDifficulty(){
   }
 }
 
-void areTheyTouchingThePad (){
+void areTheyTouchingThePad() {
   bool completionSuccess = false;
-    while (!completionSuccess){
-      completionSuccess = true;
-      
-      findAverageOnEachFinger("Press fingers:");
+  while (!completionSuccess) {
+    completionSuccess = true;
+    findAverageOnEachFinger("Press fingers:");
 
-      for (int i = 0; i < howManyFingers; i++) {
-
-        int whatFingers = amountOfFingers[i] - 1;
-        int raw = (count > 0) ? totals[i] / count : 0;
-        int reading = map(raw, noiseBaseline[whatFingers], 1023, 0, 1023);
-        reading = constrain(reading, 0, 1023);
-
-        if (reading < thresholdValue[whatFingers]) {
-          completionSuccess = false;
-          showRetryScreen();
-          break;
-        }
-      }
+    if (!checkRequiredFingers()) {
+      completionSuccess = false;
+      showRetryScreen();
+    } else if (!checkUnrequiredFingers()) {
+      completionSuccess = false;
+      showRetryScreen();
     }
+  }
+
   initialiseScreen(completionScreen);
   delay(4000);
 
@@ -294,8 +288,8 @@ void areTheyTouchingThePad (){
   u8g2.sendBuffer();
   delay(4000);
 
-  while (!CircuitPlayground.leftButton());         // wait for press
-  while (CircuitPlayground.leftButton());          // wait for release
+  while (!CircuitPlayground.leftButton());
+  while (CircuitPlayground.leftButton());
 }
 
 void programRuntime() { // what the program runs
@@ -393,3 +387,37 @@ void findAverageOnEachFinger(const char* message){
 }
 
 // TODO: Make sure the correct fingers are pushed down
+
+bool checkRequiredFingers() {
+  for (int i = 0; i < howManyFingers; i++) {
+    int whatFingers = amountOfFingers[i] - 1;
+    int raw = (count > 0) ? totals[i] / count : 0;
+    int reading = map(raw, noiseBaseline[whatFingers], 1023, 0, 1023);
+    reading = constrain(reading, 0, 1023);
+    if (reading < thresholdValue[whatFingers]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool checkUnrequiredFingers() {
+  for (int i = 0; i < numSensors; i++) {
+    bool isRequired = false;
+    for (int j = 0; j < howManyFingers; j++) {
+      if (amountOfFingers[j] - 1 == i) {
+        isRequired = true;
+        break;
+      }
+    }
+    if (!isRequired) {
+      int raw = analogRead(fsrPins[i]);
+      int reading = map(raw, noiseBaseline[i], 1023, 0, 1023);
+      reading = constrain(reading, 0, 1023);
+      if (reading > thresholdValue[i]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
