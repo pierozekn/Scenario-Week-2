@@ -1,5 +1,8 @@
 #include <Adafruit_CircuitPlayground.h>
 #include <Wire.h>
+#include <U8g2lib.h>
+
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, SCL, SDA, U8X8_PIN_NONE); // Constructs the OLED display
 
 // declarations:
 
@@ -28,7 +31,7 @@ int count = 0; // Used to find the average
 int noiseBaseline[3] = {0, 0, 0}; // used in baseline calculations
 
 // function declarations here:
-void showCountdownScreen(const char* message, int fingers[], int fingerCount, int secondsLeft, int &lastSecondShown);
+void showCountdownScreen(const char* message, int fingers[], int fingerCount, int secondsLeft);
 void findMaxForce();
 void clearMaxForce();
 void findForceThresholdValue();
@@ -37,8 +40,11 @@ void programRuntime();
 void selectDifficulty();
 void findAverageOnEachFinger(const char* message);
 void removingSystematicErrors();
+bool checkRequiredFingers();
+bool checkUnrequiredFingers();
 
 // function declarations for calibrating screen:
+void initialiseScreen(void (*drawingFunction)());
 void welcomeScreen();
 void calibratingScreen();
 void exerciseScreen();
@@ -50,8 +56,6 @@ void finishScreen();
 void difficultyScreen();
 void removingSystematicErrorsScreen();
 void pressLeftToContinueScreen();
-bool checkRequiredFingers();
-bool checkUnrequiredFingers();
 
 void setup() {
   Serial.begin(9600);
@@ -75,19 +79,20 @@ void clearMaxForce() { // Resets the maximum force for each sensor
 }
 
 // Responsible for showing a countdown screen to display a certain message, amount of fingers and how many seconds left determines by the function
-void showCountdownScreen(const char* message, int fingers[], int fingerCount, int secondsLeft, int &lastSecondShown) {
-  if (secondsLeft != lastSecondShown) { // Only print when the second changes
-    lastSecondShown = secondsLeft;
-    Serial.print(message);
-    Serial.print(" Fingers: ");
-    for (int i = 0; i < fingerCount; i++) {
-      Serial.print(fingers[i]);
-      if (i < fingerCount - 1) Serial.print(", ");
-    }
-    Serial.print(" | ");
-    Serial.print(secondsLeft);
-    Serial.println("s left");
+void showCountdownScreen(const char* message, int fingers[], int fingerCount, int secondsLeft) { 
+  u8g2.clearBuffer(); // Clear screen
+  u8g2.setFont(u8g2_font_ncenB08_tr); //Set font
+  u8g2.drawStr(5, 20, message); //Draw the message e.g. Press fingers! or Don't press anything!
+  int x = 5; // Sets the position for the timer
+  for (int i = 0; i < fingerCount; i++) { //Change the positions 
+    u8g2.setCursor(x, 40);
+    u8g2.print(fingers[i]);
+    x += 15;
   }
+  u8g2.setCursor(70, 40);
+  u8g2.print(secondsLeft);
+  u8g2.drawStr(80, 40, "s left");
+  u8g2.sendBuffer();
 }
 
 void findMaxForce() { // Find the maximum force through the sensor 
@@ -148,65 +153,75 @@ void findForceThresholdValue(){ // Finding the threshold value
 }
 
 // function declerations for screens:  
-
-
-void welcomeScreen() {
-  Serial.println("=== Welcome to Finger Exercise! ===");
-  Serial.println("Press LEFT Button to continue.");
+void initialiseScreen(void (*drawingFunction)()) { // Drawing function - What should the screen says
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  drawingFunction();
+  u8g2.sendBuffer();
 }
 
-void calibratingScreen() {
-  Serial.println("=== Calibrating... ===");
-  Serial.println("Get ready to squeeze each finger.");
+void welcomeScreen(){ 
+  u8g2.drawStr(5, 20, "Welcome to...");
+  u8g2.drawStr(5, 40, "Press LEFT Button");
 }
 
-void removingSystematicErrorsScreen() {
-  Serial.println("=== Calibrating... ===");
-  Serial.println("Don't touch anything!");
+void calibratingScreen(){ 
+  u8g2.drawStr(5, 20, "Calibrating...");
+  u8g2.drawStr(5, 40, "Squeeze each finger");
 }
 
-void exerciseScreen() {
-  Serial.print("=== Put Down Fingers: ");
+void removingSystematicErrorsScreen(){ 
+  u8g2.drawStr(5, 20, "Calibrating...");
+  u8g2.drawStr(5, 40, "Don't touch anything!");
+}
+
+void exerciseScreen(){
+  u8g2.drawStr(5, 20, "Put Down fingers:");
+  int position = 5;
   for (int i = 0; i < howManyFingers; i++) {
-    Serial.print(amountOfFingers[i]);
-    if (i < howManyFingers - 1) Serial.print(", ");
+    u8g2.setCursor(position, 40);
+    u8g2.print(amountOfFingers[i]);
+    position += 15;
   }
-  Serial.println(" ===");
 }
 
-void pressLeftToContinueScreen() {
-  Serial.println("Press LEFT Button to continue.");
+void pressLeftToContinueScreen(){
+  u8g2.drawStr(5, 20, "Press LEFT Button");
+  u8g2.drawStr(5, 40, "to continue:");
 }
 
-void completionScreen() {
-  Serial.println("=== Great job! Exercise complete! ===");
+void completionScreen(){
+  u8g2.drawStr(5, 20, "Great job!");
+  u8g2.drawStr(5, 40, "Exercise complete");
 }
 
-void nextFingerScreen() {
-  Serial.print("=== Now press finger: ");
-  Serial.print(currentFinger);
-  Serial.println(" ===");
+void nextFinger() { 
+  u8g2.drawStr(5, 20, "Now press finger:");
+  u8g2.setCursor(5, 40);
+  u8g2.print(currentFinger);
 }
 
-void completedExerciseScreen() {
-  Serial.println("=== Great job! Calibration complete! ===");
+void completedExerciseScreen(){
+  u8g2.drawStr(5, 20, "Great job!");
+  u8g2.drawStr(5, 40, "Calibration complete");
 }
 
-void finishScreen() {
-  Serial.println("=== You have great touch! ===");
-  Serial.println("Press LEFT to retry!");
+void finishScreen(){
+  u8g2.drawStr(5, 20, "you have great touch!");
+  u8g2.drawStr(5, 40, "Tap LEFT to retry!");
 }
 
 void showRetryScreen() {
-  Serial.println("=== Please retry! ===");
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.drawStr(5, 20, "Please retry:");
+  u8g2.sendBuffer();
   delay(4000);
 }
 
 void difficultyScreen() {
-  Serial.print("=== Difficulty: ");
-  Serial.print(difficultyNames[currentDifficulty]);
-  Serial.println(" ===");
-  Serial.println("Press RIGHT to cycle difficulty, LEFT to confirm.");
+  u8g2.drawStr(5, 20, "Difficulty:");
+  u8g2.drawStr(5, 40, difficultyNames[currentDifficulty]);
 }
 
 // functions for exercising the fingers
@@ -238,17 +253,17 @@ void selectDifficulty(){ // This selects the difficulty
       case 0:
       // show easy screen
       currentDifficulty = 1; // increment difficulty to 1 so when right button is rpessed, moves onto case 1. 
-      difficultyScreen();
+      initialiseScreen(difficultyScreen);
       break;
       case 1:
       // show medium screen
       currentDifficulty = 2;
-      difficultyScreen();
+      initialiseScreen(difficultyScreen);
       break;
       case 2:
       // show hard screen
       currentDifficulty = 0;
-      difficultyScreen();
+      initialiseScreen(difficultyScreen);
       break;
 
     }
@@ -269,41 +284,41 @@ void areTheyTouchingThePad() { // Well..... are they touching the pad?
 
     if (!checkRequiredFingers()) { // look at each finger that SHOULD be pressed, if the return value is false:
       completionSuccess = false; // return false
-      showRetryScreen(); 
+      initialiseScreen(showRetryScreen); 
     // retry again
     } else if (!checkUnrequiredFingers()) { // look at each finger that SHOULDN'T be pressed, if the return value is false:
       completionSuccess = false; // return false
-      showRetryScreen(); // retry again
+      initialiseScreen(showRetryScreen); // retry again
     }
   }
 
-  completionScreen(); // If ALL conditions are satifised, exercises are completed and good
+  initialiseScreen(completionScreen); // If ALL conditions are satifised, exercises are completed and good
   delay(4000);
-  pressLeftToContinueScreen();
+  initialiseScreen(pressLeftToContinueScreen);
 
   while (!CircuitPlayground.leftButton()); // only continue if the left button is continue
   while (CircuitPlayground.leftButton()); 
 }
 
 void programRuntime() { // what the program runs
-  selectDifficulty(); // select the difficulty, only runs on case 3 (has to be initialised now becuase it uses right button and not left)
+  initialiseScreen(selectDifficulty); // select the difficulty, only runs on case 3 (has to be initialised now becuase it uses right button and not left)
 
   if (leftButtonPressed == true && lastLeftButtonPressed == false){ //state machine control, only continues when left button is pressed
     switch (currentStep){ // Starts a switch so that it only carries on when the leftButton is pressed
       case 0:
       // program first runs... show screen 
-        welcomeScreen();
+        initialiseScreen(welcomeScreen);
         currentStep = 1; //increment step
         break;
       case 1:
         // set the screen to say "time to calibrate"
-        removingSystematicErrorsScreen(); //to calibrate the force
+        initialiseScreen(removingSystematicErrorsScreen); //to calibrate the force
         delay(4000);
         removingSystematicErrors(); // Remove systematic errors
         delay(4000);
       // Calibrates the finger force, iterates through each of the fingers and calculates the maximum force
 
-        calibratingScreen(); //to calibrate the force
+        initialiseScreen(calibratingScreen); //to calibrate the force
         delay(4000);
 
         findMaxForce();
@@ -314,7 +329,7 @@ void programRuntime() { // what the program runs
 
       case 2: 
       // Choose the difficulty screen
-        difficultyScreen();
+        initialiseScreen(difficultyScreen);
         currentStep = 3;
         break;
         
@@ -324,7 +339,7 @@ void programRuntime() { // what the program runs
         reps = repCounts[confirmedDifficulty];
         for (int i = 0; i < reps; i++){
           generateSet();
-          exerciseScreen();  
+          initialiseScreen(exerciseScreen);  
           areTheyTouchingThePad ();
         }
 
@@ -334,7 +349,7 @@ void programRuntime() { // what the program runs
       case 4:
       // complete the exercise
 
-        finishScreen();
+        initialiseScreen(finishScreen);
         currentStep = 0;
         break;
 
@@ -368,7 +383,7 @@ void findAverageOnEachFinger(const char* message){
   while (millis() - fingerStart < 5000) { // Start a 5 second time
     unsigned long elapsed = millis() - fingerStart; // Start a timer
     int secondsLeft = 5 - (elapsed / 1000); // Figure out the seconds left
-    showCountdownScreen(message, amountOfFingers, howManyFingers, secondsLeft, lastSecondShown);
+    showCountdownScreen(message, amountOfFingers, howManyFingers, secondsLeft);
 
     for (int i = 0; i < howManyFingers; i++) { // For each finger:
         int whatFingers = amountOfFingers[i] - 1; // Change the index
